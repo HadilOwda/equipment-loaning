@@ -30,9 +30,14 @@ export default async function getAuthState(): Promise<GetAuthStateReturnValue> {
         idToken !== undefined
     );
 
+    // Cognito omits `cognito:groups` entirely when the user belongs to no groups,
+    // so this cannot be cast to string[] and indexed directly.
+    const groups = accessToken?.payload['cognito:groups'];
+
     const isUserAdmin = (
         isUserAuthenticated &&
-        (accessToken.payload['cognito:groups'] as string[]).includes(ADMIN_GROUP)
+        Array.isArray(groups) &&
+        groups.includes(ADMIN_GROUP)
     )
 
     return {
