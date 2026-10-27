@@ -12,9 +12,11 @@ interface UpdateDialogProps {
     onSubmit: () => Promise<boolean>;  // bool denotes if creation was successful
     canSubmit: boolean;
     onSuccess?: () => void;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }
 
-export default function UpdateDialog({ name, description, showIndicatesRequiredField, children, onSubmit, canSubmit, onSuccess }: UpdateDialogProps) {
+export default function UpdateDialog({ name, description, showIndicatesRequiredField, children, onSubmit, canSubmit, onSuccess, open, onOpenChange }: UpdateDialogProps) {
     const router = useRouter();
 
     return <CRUDDialog
@@ -27,5 +29,7 @@ export default function UpdateDialog({ name, description, showIndicatesRequiredF
         onSubmit={onSubmit}
         canSubmit={canSubmit}
         onSuccess={onSuccess ?? (() => router.refresh())}
+        open={open}
+        onOpenChange={onOpenChange}
     />
 }

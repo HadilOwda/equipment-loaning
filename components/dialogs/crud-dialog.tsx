@@ -26,6 +26,9 @@ interface CRUDDialogProps {
     onSubmit: () => Promise<boolean>;  // bool denotes if operation was successful
     canSubmit: boolean;
     onSuccess?: () => void;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    destructive?: boolean;
 }
 
 export default function CRUDDialog({
@@ -37,10 +40,21 @@ export default function CRUDDialog({
     children,
     onSubmit,
     canSubmit,
-    onSuccess
+    onSuccess,
+    open: controlledOpen,
+    onOpenChange,
+    destructive = false
 }: CRUDDialogProps) {
-    const [open, setOpen] = useState(false);
+    const [internalOpen, setInternalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const open = controlledOpen ?? internalOpen;
+
+    const setOpen = (nextOpen: boolean) => {
+        if (controlledOpen === undefined) {
+            setInternalOpen(nextOpen);
+        }
+        onOpenChange?.(nextOpen);
+    };
 
     const submit = async () => {
         setIsLoading(true);
@@ -59,9 +73,11 @@ export default function CRUDDialog({
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button variant='secondary'>{title}</Button>
-            </DialogTrigger>
+            {controlledOpen === undefined && (
+                <DialogTrigger asChild>
+                    <Button variant='secondary'>{title}</Button>
+                </DialogTrigger>
+            )}
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
@@ -80,6 +96,7 @@ export default function CRUDDialog({
                     <Button
                         disabled={isLoading || !canSubmit}
                         type='submit'
+                        variant={destructive ? 'destructive' : 'default'}
                         onClick={submit}
                     >
                         {isLoading ? 'Loading...' : submitButtonLabel}
