@@ -13,6 +13,7 @@ import generateClient from '@/app/utils/generate-client';
 import handleError from '@/app/utils/handle-error';
 import { toast } from 'sonner';
 import { UserDisplayNames } from '../display-names-config';
+import { useRouter } from 'next/navigation';
 
 interface UnassignedRequestsProps {
     period: PeriodRequests;
@@ -23,6 +24,7 @@ interface UnassignedRequestsProps {
 
 export default function UnassignedRequests({ period, newAssignments, setNewAssignments, userDisplayNames }: UnassignedRequestsProps) {
     const client = generateClient();
+    const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
 
     console.log(period)
@@ -91,7 +93,9 @@ export default function UnassignedRequests({ period, newAssignments, setNewAssig
         });
 
         if (!hasErrors) {
-            toast.success('Assignments updated (reload page to see updates)')
+            setNewAssignments([]);
+            toast.success('Assignments updated');
+            router.refresh();
         }
         setIsLoading(false);
     }

@@ -23,13 +23,15 @@ export default function UpdateLoanableEquipmentDialog({ periodId, initialLoanabl
         });
 
         const results = await Promise.all(addOperations.concat(removeOperations));
+        let hasErrors = false;
         results.map(result => {
             if (result.errors) {
                 handleError(result.errors);
+                hasErrors = true;
             }
         });
 
-        return true;
+        return !hasErrors;
     };
 
     return (

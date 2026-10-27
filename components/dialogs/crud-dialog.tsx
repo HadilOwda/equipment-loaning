@@ -25,6 +25,7 @@ interface CRUDDialogProps {
     children: ReactNode;
     onSubmit: () => Promise<boolean>;  // bool denotes if operation was successful
     canSubmit: boolean;
+    onSuccess?: () => void;
 }
 
 export default function CRUDDialog({
@@ -35,7 +36,8 @@ export default function CRUDDialog({
     showIndicatesRequiredField = true,
     children,
     onSubmit,
-    canSubmit
+    canSubmit,
+    onSuccess
 }: CRUDDialogProps) {
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -45,6 +47,7 @@ export default function CRUDDialog({
         try {
             const success = await onSubmit();
             if (success) {
+                onSuccess?.();
                 setOpen(false);
                 toast.success(successMessage);
             }

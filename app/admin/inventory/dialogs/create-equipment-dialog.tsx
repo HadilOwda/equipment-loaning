@@ -34,6 +34,7 @@ export default function CreateEquipmentDialog() {
                 return false;
             } else {
                 handleError(result.errors);
+                return false;
             }
         }
 

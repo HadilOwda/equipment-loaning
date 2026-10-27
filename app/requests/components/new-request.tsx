@@ -13,8 +13,10 @@ import { Button } from '@/components/ui/button';
 import generateClient from '@/app/utils/generate-client';
 import handleError from '@/app/utils/handle-error';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 export default function NewRequest({ periods }: { periods: Period[] }) {
+    const router = useRouter();
     const [periodId, setPeriodId] = useState('');
     const [selectedEquipmentTypeIds, setSelectedEquipmentTypeIds] = useState<string[]>([]);
     const [collateral, setCollateral] = useState('');
@@ -69,7 +71,8 @@ export default function NewRequest({ periods }: { periods: Period[] }) {
             setSelectedEquipmentTypeIds([]);
             setCollateral('');
 
-            toast.info('Requested created (reload page to see updates)');
+            toast.success('Request created');
+            router.refresh();
         }
 
         setIsLoading(false);
@@ -85,6 +88,7 @@ export default function NewRequest({ periods }: { periods: Period[] }) {
                     inputID='new-request-period'
                     placeholder='e.g. Immerse the Bay 2025'
                     label='Loaning Period'
+                    emptyMessage='No periods available'
                     queryData={async () => periods.map(p => ({
                         label: p.name,
                         value: p.id
