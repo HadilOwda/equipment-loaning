@@ -24,6 +24,8 @@ export default function RequestAttributes({ request }: { request: RequestWithDet
         } else {
             statusLabel = 'Awaiting Checkout';
         }
+    } else if (request.status == RequestStatus.DENIED) {
+        statusLabel = 'Denied';
     } else {
         statusLabel = 'Request pending';
     }
@@ -72,7 +74,7 @@ export default function RequestAttributes({ request }: { request: RequestWithDet
                             .sort((a, b) => !a.rank ? 0 : (!b.rank ? 0 : a.rank - b.rank))
                             .map(({ rank, equipmentType }) => {
                                 return (
-                                    <Item variant='outline' key={rank}>
+                                    <Item variant='outline' key={equipmentType.id}>
                                         <ItemContent>
                                             <ItemTitle>{equipmentType.name}</ItemTitle>
                                             {
