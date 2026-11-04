@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { createServerRunner } from '@aws-amplify/adapter-nextjs';
-import outputs from '@/amplify_outputs.json';
+import amplifyConfig from './amplify-config';
 import { fetchAuthSession } from 'aws-amplify/auth/server';
 import { ADMIN_GROUP } from '@/amplify/auth/constants';
 
@@ -11,7 +11,7 @@ interface GetAuthStateReturnValue {
 
 export default async function getAuthState(): Promise<GetAuthStateReturnValue> {
     const { runWithAmplifyServerContext } = createServerRunner({
-        config: outputs
+        config: amplifyConfig
     });
 
     let session = await runWithAmplifyServerContext({

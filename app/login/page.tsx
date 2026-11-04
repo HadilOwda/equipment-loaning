@@ -7,8 +7,8 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import { signInWithRedirect } from 'aws-amplify/auth'
 import useAmplify from '../hooks/use-amplify'
+import signIn from '../utils/sign-in'
 
 export default function Login() {
     useAmplify();
@@ -22,11 +22,7 @@ export default function Login() {
                 <CardContent>
                     <Button
                         className='w-full'
-                        onClick={async () =>
-                            await signInWithRedirect({
-                                provider: 'Google'
-                            })
-                        }>Log in with Google</Button>
+                        onClick={signIn}>Log in with Google</Button>
                 </CardContent>
             </Card>
         </div>
