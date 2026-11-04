@@ -1,6 +1,9 @@
 'use client'
 
 import EquipmentSelect, { EquipmentSelectItem } from '../components/equipment-select';
+import { UserDisplayNames } from '../display-names-config';
+import { RequestStatus } from '@/amplify/data/constants';
+import DenyRequestButton from './deny-request-button';
 import { RequestMatchingItem } from '../components/request-matching-item';
 import { PeriodRequests } from './period-requests-config';
 import { Assignment } from './requests';
@@ -29,8 +32,12 @@ export default function UnassignedRequests({ period, newAssignments, setNewAssig
 
     // Here, unassigned requests denote requests that are unassigned at the time of page load --
     // that is, selecting a value from EquipmentSelect will not move the request to Assigned Requests
-    const unassignedRequests = period.requests.filter(r => !r.assignment && !r.pastAssignment);
-
+const unassignedRequests = period.requests.filter(
+    r =>
+        !r.assignment &&
+        !r.pastAssignment &&
+        r.status !== RequestStatus.DENIED
+);
     // Create object that maps from equipmentId -> EquipmentSelectItem, then decompose into a list after
     let equipmentSelectItemsObject: { [equipmentId: string]: EquipmentSelectItem } = {};
     period.loanableEquipment.map(({ equipment }) => {
@@ -138,7 +145,13 @@ export default function UnassignedRequests({ period, newAssignments, setNewAssig
                                 }}
                                 onClearValue={() => removeNewAssignment(request.id)}
                             />
-                        </RequestMatchingItem>
+                                                        
+                            <DenyRequestButton
+                                requestId={request.id}
+                                onDenied={() => removeNewAssignment(request.id)}
+                            />
+                            
+                                                    </RequestMatchingItem>
                     );
                 })}
             </div>
