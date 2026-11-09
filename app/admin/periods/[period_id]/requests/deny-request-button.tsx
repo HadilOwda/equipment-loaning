@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
 import { toast } from 'sonner';
-import { RequestStatus } from '@/amplify/data/constants';
+import { denyRequestInDatabase } from './deny-request-update';
 import { Button } from '@/components/ui/button';
 import generateClient from '@/app/utils/generate-client';
 import handleError from '@/app/utils/handle-error';
@@ -31,11 +31,10 @@ export default function DenyRequestButton({
 
         try {
             const client = generateClient();
-            const { data, errors } = await client.models.Request.update({
-                id: requestId,
-                status: RequestStatus.DENIED,
-                assignmentId: null,
-            });
+            const { data, errors } = await denyRequestInDatabase(
+            requestId,
+            (input) => client.models.Request.update(input)
+            );
 
             if (errors?.length) {
                 handleError(errors);
