@@ -21,6 +21,12 @@ const schema = a.schema({
     ]),
 
   Request: a.model({
+    
+    owner: a.string().authorization(allow => [
+        allow.owner().to(['read', 'delete']),
+        allow.group(ADMIN_GROUP)
+    ]),
+
     id: a.id().required()
       .authorization(allow => [
         allow.owner(),
@@ -50,18 +56,32 @@ const schema = a.schema({
       ]),
 
     // Admin only
-    status: a.enum(Object.values(RequestStatus)),
+status: a.enum(Object.values(RequestStatus))
+    .authorization(allow => [
+        allow.group(ADMIN_GROUP),
+        allow.owner().to(['read'])
+    ]),
+    
 
-    assignmentId: a.id(),
+assignmentId: a.id()
+    .authorization(allow => [
+        allow.group(ADMIN_GROUP),
+        allow.owner().to(['read'])
+    ]),
     assignment: a.belongsTo('Equipment', 'assignmentId'),
 
-    pastAssignmentId: a.id(),
+
+pastAssignmentId: a.id()
+    .authorization(allow => [
+        allow.group(ADMIN_GROUP),
+        allow.owner().to(['read'])
+    ]),
     pastAssignment: a.belongsTo('Equipment', 'pastAssignmentId')
   })
-    .authorization(allow => [
-      allow.owner().to(['get', 'list']),
-      allow.group(ADMIN_GROUP)
-    ]),
+  .authorization(allow => [
+  allow.owner().to(['get', 'list', 'update', 'delete']),
+  allow.group(ADMIN_GROUP)
+]),
 
   EquipmentType: a.model({
     id: a.id().required(),
