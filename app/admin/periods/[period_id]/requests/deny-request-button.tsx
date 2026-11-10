@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -50,7 +49,7 @@ export default function DenyRequestButton({
 
             onDenied?.();
             setOpen(false);
-            toast.success('Request denied.');
+            toast.success(hasAssignment ? 'Approval revoked.' : 'Request denied.');
             router.refresh();
         } catch (error) {
             handleError(
@@ -77,7 +76,7 @@ export default function DenyRequestButton({
                     variant='destructive'
                     disabled={isLoading}
                 >
-                    Deny Request
+                    {hasAssignment ? 'Revoke approval' : 'Deny Request'}
                 </Button>
             </Dialog.Trigger>
 
@@ -86,14 +85,13 @@ export default function DenyRequestButton({
 
                 <Dialog.Content className='fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background p-6 shadow-lg'>
                     <Dialog.Title className='text-lg font-semibold'>
-                        Deny this request?
+                        {hasAssignment ? 'Revoke this approval?' : 'Deny this request?'}
                     </Dialog.Title>
 
                     <Dialog.Description className='mt-2 text-sm text-muted-foreground'>
-                        This will mark the request as denied.
                         {hasAssignment
-                            ? ' Its current equipment assignment will be removed.'
-                            : ''}
+                            ? 'This will mark the request as denied and free the assigned equipment.'
+                            : 'This will mark the request as denied.'}
                         {' '}This action can only be reversed by updating the request again.
                     </Dialog.Description>
 
@@ -114,7 +112,7 @@ export default function DenyRequestButton({
                             disabled={isLoading}
                             onClick={denyRequest}
                         >
-                            {isLoading ? 'Denying...' : 'Confirm Denial'}
+                            {isLoading ? 'Working...' : (hasAssignment ? 'Confirm Revoke' : 'Confirm Denial')}
                         </Button>
                     </div>
                 </Dialog.Content>

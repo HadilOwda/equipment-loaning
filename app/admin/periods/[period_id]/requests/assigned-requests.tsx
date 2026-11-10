@@ -44,10 +44,12 @@ const assignedRequests = period.requests.filter(
                             {badgeLabel &&
                                 <Badge variant='secondary'>{badgeLabel}</Badge>
                             }
-                            <DenyRequestButton
-                                requestId={request.id}
-                                hasAssignment={!!request.assignment}
-                            />
+                            {request.assignment && request.status !== RequestStatus.CHECKED_OUT &&
+                        <DenyRequestButton
+                            requestId={request.id}
+                            hasAssignment={true}
+                        />
+                    }
                         </div>
                     </RequestMatchingItem>
                 );
