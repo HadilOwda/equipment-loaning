@@ -4,14 +4,18 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+
 import { Button } from '@/components/ui/button';
 import { TextInputWithLabel } from '@/components/primitives/interactions/text-input-with-label';
 import EquipmentTypeList from '../../components/equipment-type-list';
-import { Period } from '../../period-config';
-import { RequestWithDetails } from '../request-details-config';
+
+import type { Period } from '../../period-config';
+import type { RequestWithDetails } from '../request-details-config';
+
 import { RequestStatus } from '@/amplify/data/constants';
 import generateClient from '@/app/utils/generate-client';
 import handleError from '@/app/utils/handle-error';
+import { saveRequestEdits } from './edit-request-operation';
 
 interface EditRequestFormProps {
     request: RequestWithDetails;
@@ -25,16 +29,22 @@ export default function EditRequestForm({
     const router = useRouter();
 
     const initialEquipmentTypeIds = [...request.equipmentTypeRequests]
-        .sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity))
-        .map(item => item.equipmentType.id);
+        .sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
+        .map((item) => item.equipmentType.id);
+
+    const [collateral, setCollateral] = useState(
+        request.collateralDescription
+    );
+
+    const [
+        selectedEquipmentTypeIds,
+        setSelectedEquipmentTypeIds,
+    ] = useState<string[]>(initialEquipmentTypeIds);
 
     const [isEditing, setIsEditing] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [collateral, setCollateral] = useState(request.collateralDescription);
-    const [selectedEquipmentTypeIds, setSelectedEquipmentTypeIds] =
-        useState<string[]>(initialEquipmentTypeIds);
 
-    const resetForm = () => {
+    const handleCancelEditing = () => {
         setCollateral(request.collateralDescription);
         setSelectedEquipmentTypeIds(initialEquipmentTypeIds);
         setIsEditing(false);
@@ -47,9 +57,12 @@ export default function EditRequestForm({
             !collateral.trim() ||
             selectedEquipmentTypeIds.length === 0 ||
             selectedEquipmentTypeIds.includes('') ||
-            new Set(selectedEquipmentTypeIds).size !== selectedEquipmentTypeIds.length
+            new Set(selectedEquipmentTypeIds).size !==
+                selectedEquipmentTypeIds.length
         ) {
-            toast.error('Please complete all fields before saving.');
+            toast.error(
+                'Please provide collateral and valid equipment preferences.'
+            );
             return;
         }
 
@@ -58,127 +71,137 @@ export default function EditRequestForm({
         try {
             const client = generateClient();
 
-            // Check that the loaning period is still open.
-            const { data: currentPeriod, errors: periodErrors } =
-                await client.models.Period.get(
-                    { id: period.id },
-                    {
-                        selectionSet: [
-                            'id',
-                            'acceptingRequests',
-                            'endDateTime',
-                        ],
-                    }
-                );
+            // Check the current loaning period before editing.
+            const {
+                data: currentPeriod,
+                errors: periodErrors,
+            } = await client.models.Period.get(
+                { id: period.id },
+                {
+                    selectionSet: [
+                        'id',
+                        'acceptingRequests',
+                        'endDateTime',
+                    ],
+                }
+            );
 
-            if (periodErrors?.length || !currentPeriod) {
-                toast.error('Unable to verify the loaning period.');
+            if (periodErrors?.length) {
+                handleError(periodErrors);
+                toast.error(
+                    'Unable to verify the loaning period.'
+                );
                 return;
             }
 
-            const endTime = Date.parse(currentPeriod.endDateTime);
+            if (!currentPeriod) {
+                toast.error('Loaning period not found.');
+                return;
+            }
+
+            const endTime = Date.parse(
+                currentPeriod.endDateTime
+            );
 
             if (
-                !currentPeriod.acceptingRequests ||
+                currentPeriod.acceptingRequests !== true ||
                 !Number.isFinite(endTime) ||
                 Date.now() >= endTime
             ) {
-                toast.error('This loaning period is no longer accepting changes.');
-                return;
-            }
-
-            // Verify the request has not already been assigned or denied.
-            const { data: currentRequest, errors: requestErrors } =
-                await client.models.Request.get(
-                    { id: request.id },
-                    {
-                        selectionSet: [
-                            'id',
-                            'status',
-                            'assignmentId',
-                            'pastAssignmentId',
-                            'equipmentTypeRequests.equipmentTypeId',
-                            'equipmentTypeRequests.rank',
-                        ],
-                    }
+                toast.error(
+                    'This loaning period is no longer accepting changes.'
                 );
-
-            if (requestErrors?.length || !currentRequest) {
-                toast.error('Unable to verify the request.');
                 return;
             }
 
+            // Fetch the latest request before making changes.
+            const {
+                data: currentRequest,
+                errors: requestErrors,
+            } = await client.models.Request.get(
+                { id: request.id },
+                {
+                    selectionSet: [
+                        'id',
+                        'status',
+                        'assignmentId',
+                        'pastAssignmentId',
+                        'equipmentTypeRequests.equipmentTypeId',
+                        'equipmentTypeRequests.rank',
+                    ],
+                }
+            );
+
+            if (requestErrors?.length) {
+                handleError(requestErrors);
+                toast.error(
+                    'Unable to verify the request.'
+                );
+                return;
+            }
+
+            if (!currentRequest) {
+                toast.error('Request not found.');
+                return;
+            }
+
+            // Assigned, previously assigned, denied, or
+            // checked-out requests cannot be edited.
             if (
                 currentRequest.assignmentId ||
                 currentRequest.pastAssignmentId ||
                 currentRequest.status === RequestStatus.DENIED ||
                 currentRequest.status === RequestStatus.CHECKED_OUT
             ) {
-                toast.error('This request can no longer be edited.');
+                toast.error(
+                    'This request can no longer be edited.'
+                );
                 return;
             }
 
-            const existingIds = new Set(
-                currentRequest.equipmentTypeRequests.map(
-                    item => item.equipmentTypeId
-                )
+            // Save equipment preferences and collateral
+            // through the testable database helper.
+            await saveRequestEdits(
+                request.id,
+                collateral,
+                selectedEquipmentTypeIds,
+                (
+                    currentRequest.equipmentTypeRequests ?? []
+                ).map((item) => item.equipmentTypeId),
+                {
+                    createPreference: (input) =>
+                        client.models.EquipmentTypeRequest.create(
+                            input
+                        ),
+
+                    updatePreference: (input) =>
+                        client.models.EquipmentTypeRequest.update(
+                            input
+                        ),
+
+                    deletePreference: (input) =>
+                        client.models.EquipmentTypeRequest.delete(
+                            input
+                        ),
+
+                    updateRequest: (input) =>
+                        client.models.Request.update(input),
+                }
             );
-
-            const selectedIds = new Set(selectedEquipmentTypeIds);
-
-            // Create new equipment preferences and update existing ranks.
-            for (const [index, equipmentTypeId] of selectedEquipmentTypeIds.entries()) {
-                const input = {
-                    equipmentTypeId,
-                    requestId: request.id,
-                    rank: index + 1,
-                };
-
-                const result = existingIds.has(equipmentTypeId)
-                    ? await client.models.EquipmentTypeRequest.update(input)
-                    : await client.models.EquipmentTypeRequest.create(input);
-
-                if (result.errors?.length || !result.data) {
-                    throw new Error('Failed to save equipment preferences.');
-                }
-            }
-
-            // Remove equipment preferences that the student deleted.
-            for (const equipmentTypeId of existingIds) {
-                if (!selectedIds.has(equipmentTypeId)) {
-                    const result = await client.models.EquipmentTypeRequest.delete({
-                        equipmentTypeId,
-                        requestId: request.id,
-                    });
-
-                    if (result.errors?.length || !result.data) {
-                        throw new Error('Failed to remove an equipment preference.');
-                    }
-                }
-            }
-
-            // Save the updated collateral description.
-            const { data, errors } = await client.models.Request.update({
-                id: request.id,
-                collateralDescription: collateral.trim(),
-            });
-
-            if (errors?.length || !data) {
-                throw new Error('Failed to update the request.');
-            }
 
             toast.success('Request updated successfully.');
             setIsEditing(false);
             router.refresh();
+
         } catch (error) {
             handleError(
                 error instanceof Error
                     ? error.message
-                    : 'Unexpected error while updating request.'
+                    : 'Unexpected error updating request.'
             );
 
             toast.error(
-                'Could not complete the update. Some changes may have saved; reload before retrying.'
+                'Request update failed. Some changes may have saved.'
             );
         } finally {
             setIsLoading(false);
@@ -187,45 +210,60 @@ export default function EditRequestForm({
 
     if (!isEditing) {
         return (
-            <Button variant='outline' onClick={() => setIsEditing(true)}>
+            <Button
+                type='button'
+                variant='outline'
+                onClick={() => setIsEditing(true)}
+            >
                 Edit Request
             </Button>
         );
     }
 
     return (
-        <div className='flex flex-col gap-4'>
-            <h2 className='text-lg font-semibold'>Edit Request</h2>
+        <div className='flex flex-col gap-6 rounded-lg border p-4'>
+            <h2 className='text-lg font-semibold'>
+                Edit Request
+            </h2>
 
             <EquipmentTypeList
                 period={period}
-                selectedEquipmentTypeIds={selectedEquipmentTypeIds}
-                setSelectedEquipmentTypeIds={setSelectedEquipmentTypeIds}
+                selectedEquipmentTypeIds={
+                    selectedEquipmentTypeIds
+                }
+                setSelectedEquipmentTypeIds={
+                    setSelectedEquipmentTypeIds
+                }
             />
 
             <TextInputWithLabel
                 inputID='edit-request-collateral'
-                label='Collateral'
+                label='Specify the collateral you intend to provide'
+                description='Describe the collateral you will provide when borrowing equipment.'
                 value={collateral}
                 onChange={setCollateral}
                 isRequired={true}
-                placeholder='Describe your collateral'
+                placeholder='e.g. Stanford ID card'
             />
 
-            <div className='flex gap-2'>
+            <div className='flex gap-3'>
                 <Button
+                    type='button'
                     onClick={handleSave}
                     disabled={isLoading}
                 >
-                    {isLoading ? 'Saving...' : 'Save Changes'}
+                    {isLoading
+                        ? 'Saving...'
+                        : 'Save Changes'}
                 </Button>
 
                 <Button
+                    type='button'
                     variant='outline'
-                    onClick={resetForm}
+                    onClick={handleCancelEditing}
                     disabled={isLoading}
                 >
-                    Cancel Editing
+                    Discard Changes
                 </Button>
             </div>
         </div>

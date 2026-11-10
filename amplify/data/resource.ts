@@ -4,6 +4,7 @@ import { ADMIN_GROUP } from './../auth/constants';
 import { getUserDisplayNames } from '../functions/resource';
 
 const schema = a.schema({
+  RequestStatusEnum: a.enum(Object.values(RequestStatus)),
   Period: a.model({
     id: a.id().required(),
     name: a.string().required(),
@@ -56,7 +57,7 @@ const schema = a.schema({
       ]),
 
     // Admin only
-status: a.enum(Object.values(RequestStatus))
+status: a.ref('RequestStatusEnum')
     .authorization(allow => [
         allow.group(ADMIN_GROUP),
         allow.owner().to(['read'])

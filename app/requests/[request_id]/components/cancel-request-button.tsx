@@ -6,9 +6,9 @@ import { useRouter } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { RequestStatus } from '@/amplify/data/constants';
 import generateClient from '@/app/utils/generate-client';
 import handleError from '@/app/utils/handle-error';
+import { cancelRequestInDatabase } from './cancel-request-operation';
 
 interface CancelRequestButtonProps {
     requestId: string;
@@ -29,58 +29,30 @@ export default function CancelRequestButton({
         try {
             const client = generateClient();
 
-            // Re-fetch the request before allowing cancellation.
-            const { data: request, errors: lookupErrors } =
-                await client.models.Request.get(
-                    { id: requestId },
-                    {
-                        selectionSet: [
-                            'id',
-                            'status',
-                            'assignmentId',
-                            'pastAssignmentId',
-                            'equipmentTypeRequests.equipmentTypeId',
-                            'equipmentTypeRequests.requestId',
-                        ],
-                    }
-                );
+            await cancelRequestInDatabase(requestId, {
+                getRequest: (id) =>
+                    client.models.Request.get(
+                        { id },
+                        {
+                            selectionSet: [
+                                'id',
+                                'status',
+                                'assignmentId',
+                                'pastAssignmentId',
+                                'equipmentTypeRequests.equipmentTypeId',
+                            ],
+                        }
+                    ),
 
-            if (lookupErrors?.length || !request) {
-                toast.error('Unable to verify the request.');
-                return;
-            }
+                deleteEquipmentPreference: (equipmentTypeId, id) =>
+                    client.models.EquipmentTypeRequest.delete({
+                        equipmentTypeId,
+                        requestId: id,
+                    }),
 
-            // Do not cancel requests that are assigned or finalized.
-            if (
-                request.assignmentId ||
-                request.pastAssignmentId ||
-                request.status === RequestStatus.DENIED ||
-                request.status === RequestStatus.CHECKED_OUT
-            ) {
-                toast.error('This request can no longer be canceled.');
-                return;
-            }
-
-            // Delete associated equipment preferences first.
-            for (const item of request.equipmentTypeRequests ?? []) {
-                const result = await client.models.EquipmentTypeRequest.delete({
-                    equipmentTypeId: item.equipmentTypeId,
-                    requestId: requestId,
-                });
-
-                if (result.errors?.length || !result.data) {
-                    throw new Error('Failed to remove equipment preferences.');
-                }
-            }
-
-            // Delete the request itself.
-            const { data, errors } = await client.models.Request.delete({
-                id: requestId,
+                deleteRequest: (id) =>
+                    client.models.Request.delete({ id }),
             });
-
-            if (errors?.length || !data) {
-                throw new Error('Failed to cancel the request.');
-            }
 
             toast.success('Request canceled successfully.');
             setOpen(false);
