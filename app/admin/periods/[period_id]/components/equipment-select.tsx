@@ -20,6 +20,7 @@ export interface EquipmentSelectItem {
         isAvailable: boolean;
     }[];
     userRank?: number;
+    isUserRequested?: boolean;  // for unranked (APPROVAL) requests
 }
 
 interface EquipmentSelectProps {
@@ -42,6 +43,9 @@ export default function EquipmentSelect({ value, items, onChange, onClearValue }
                             <div className='uppercase'>{equipmentType.eqiupmentTypeName}</div>
                             {equipmentType.userRank &&
                                 <Badge variant='secondary'>User&apos;s {getUserRankLabel(equipmentType.userRank)} choice</Badge>
+                            }
+                            {equipmentType.isUserRequested &&
+                                <Badge variant='secondary'>Requested</Badge>
                             }
                         </SelectLabel>
                         {equipmentType.equipments.map((equipment) => {

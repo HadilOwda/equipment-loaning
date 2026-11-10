@@ -2,7 +2,7 @@ import generateSSRClient from '@/app/utils/generate-ssr-client';
 import Header from '@/components/primitives/text/header';
 import { cookies } from 'next/headers';
 import { createServerRunner } from '@aws-amplify/adapter-nextjs';
-import outputs from '@/amplify_outputs.json';
+import amplifyConfig from '@/app/utils/amplify-config';
 import { getCurrentUser } from 'aws-amplify/auth/server';
 import { Item, ItemContent, ItemDescription, ItemTitle } from '@/components/ui/item';
 import { requestsSelectionSet } from '../requests-config';
@@ -18,7 +18,7 @@ export default async function CurrentRequests() {
 
 
     const { runWithAmplifyServerContext } = createServerRunner({
-        config: outputs
+        config: amplifyConfig
     });
 
     const { username } = await runWithAmplifyServerContext({

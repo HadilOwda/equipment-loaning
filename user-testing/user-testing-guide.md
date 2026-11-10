@@ -15,7 +15,7 @@ Quick reference for informal single-person testing.
 **S2 - Submit Equipment Request**
 
 - [ ] Select period, add ranked equipment preferences (Meta Quest 3 > Snap Spectacles > OpenBCI Galea), enter collateral description
-- [ ] Submit request, verify toast notification, reload page to see request in "Current Requests"
+- [ ] Submit request, verify toast notification, and confirm the request appears in "Current Requests"
 
 **S3 - Reorder Equipment Preferences**
 

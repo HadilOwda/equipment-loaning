@@ -3,6 +3,7 @@ import PeriodNotFound from '../components/period-not-found';
 import { periodRequestsSelectionSet } from './period-requests-config';
 import { PeriodType } from '@/amplify/data/constants';
 import Requests from './requests';
+import ApprovalRequests from './approval-requests';
 
 interface AdminPeriodRequestsPageProps {
 	params: {
@@ -36,14 +37,8 @@ export default async function AdminPeriodRequestsPage({ params }: AdminPeriodReq
 	}
 
 	if (period.data.periodType == PeriodType.APPROVAL) {
-		return (
-			<div className='flex items-center justify-center w-full h-full text-muted-foreground'>
-				<div className='text-center'>
-					<div>Periods of type <span className='font-mono'>APPROVAL</span> (general loaning) are not yet supported.</div>
-				</div>
-			</div>
-		)
-	};
+		return <ApprovalRequests period={period.data} userDisplayNames={userDisplayNames.data ?? []} />;
+	}
 
 	return <Requests period={period.data} userDisplayNames={userDisplayNames.data ?? []} />;
 }
