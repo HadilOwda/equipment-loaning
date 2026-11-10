@@ -1,4 +1,3 @@
-
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +8,7 @@ import { PeriodType } from '@/amplify/data/constants';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircleIcon } from 'lucide-react';
 import EquipmentTypeList from './equipment-type-list';
+import EquipmentTypeListApproval from './equipment-type-list-approval';
 import { TextInputWithLabel } from '@/components/primitives/interactions/text-input-with-label';
 import { Button } from '@/components/ui/button';
 import generateClient from '@/app/utils/generate-client';
@@ -83,8 +83,10 @@ export default function NewRequest({ periods }: { periods: Period[] }) {
                 return;
             }
 
+            // APPROVAL periods are unranked; MATCH periods rank by selection order
+            const isRanked = selectedPeriod?.periodType == PeriodType.MATCH;
             const equipmentTypeRequests = await Promise.all(selectedEquipmentTypeIds.map((equipmentTypeId, i) =>
-                client.models.EquipmentTypeRequest.create({ equipmentTypeId, requestId, rank: i + 1 })
+                client.models.EquipmentTypeRequest.create({ equipmentTypeId, requestId, rank: isRanked ? i + 1 : undefined })
             ));
 
             let hasErrors = false;
@@ -127,21 +129,14 @@ export default function NewRequest({ periods }: { periods: Period[] }) {
                         value: p.id
                     }))}
                     value={periodId}
-                    onChange={setPeriodId}
+                    onChange={(val) => {
+                        setPeriodId(val);
+                        setSelectedEquipmentTypeIds([]);
+                    }}
                 />
                 {
-                    selectedPeriod?.periodType == PeriodType.APPROVAL &&
-                    <Alert>
-                        <AlertCircleIcon />
-                        <AlertTitle>Loaning Period not supported</AlertTitle>
-                        <AlertDescription>
-                            This loaning period is set to general loaning (non-hackathon) which is not yet supported.
-                            Please contact an administrator if you think this is a mistake.
-                        </AlertDescription>
-                    </Alert>
-                }
-                {
-                    selectedPeriod?.periodType == PeriodType.MATCH &&
+                    selectedPeriod &&
+                    (selectedPeriod.periodType == PeriodType.MATCH || selectedPeriod.periodType == PeriodType.APPROVAL) &&
                     (
                         selectedPeriod.loanableEquipment.length == 0 ?
                             <Alert>
@@ -154,11 +149,19 @@ export default function NewRequest({ periods }: { periods: Period[] }) {
                             </Alert>
                             :
                             <>
-                                <EquipmentTypeList
-                                    period={selectedPeriod}
-                                    selectedEquipmentTypeIds={selectedEquipmentTypeIds}
-                                    setSelectedEquipmentTypeIds={setSelectedEquipmentTypeIds}
-                                />
+                                {selectedPeriod.periodType == PeriodType.MATCH ?
+                                    <EquipmentTypeList
+                                        period={selectedPeriod}
+                                        selectedEquipmentTypeIds={selectedEquipmentTypeIds}
+                                        setSelectedEquipmentTypeIds={setSelectedEquipmentTypeIds}
+                                    />
+                                    :
+                                    <EquipmentTypeListApproval
+                                        period={selectedPeriod}
+                                        selectedEquipmentTypeIds={selectedEquipmentTypeIds}
+                                        setSelectedEquipmentTypeIds={setSelectedEquipmentTypeIds}
+                                    />
+                                }
 
                                 <TextInputWithLabel
                                     inputID='new-request-collateral'
