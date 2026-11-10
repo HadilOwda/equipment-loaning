@@ -15,6 +15,8 @@ import PeriodNotFound from './components/period-not-found';
 import AttributeGrid from '@/components/primitives/attribute-grid';
 import Attribute from '@/components/primitives/attribute';
 import UpdateLoanableEquipmentDialog from './components/update-loanable-equipment-dialog';
+import UpdatePeriodDialog from './components/update-period-dialog';
+import DeletePeriodDialog from './components/delete-period-dialog';
 
 interface AdminPeriodPageProps {
   params: {
@@ -41,7 +43,11 @@ export default async function AdminPeriodPage({ params }: AdminPeriodPageProps) 
 
   return (
     <Container>
-      <Title>{period.data.name}</Title>
+      <div className='flex flex-wrap items-center gap-2 mb-4'>
+        <Title className='mb-0 grow'>{period.data.name}</Title>
+        <UpdatePeriodDialog period={period.data} />
+        <DeletePeriodDialog period={period.data} />
+      </div>
       <div className='flex flex-col gap-8'>
         <PeriodOverview period={period.data} />
         <PeriodLoanableEquipment period={period.data} />
