@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { createServerRunner } from '@aws-amplify/adapter-nextjs';
-import outputs from '@/amplify_outputs.json';
+import amplifyConfig from './amplify-config';
 import { fetchAuthSession } from 'aws-amplify/auth/server';
 import { ADMIN_GROUP } from '@/amplify/auth/constants';
 
@@ -11,7 +11,7 @@ interface GetAuthStateReturnValue {
 
 export default async function getAuthState(): Promise<GetAuthStateReturnValue> {
     const { runWithAmplifyServerContext } = createServerRunner({
-        config: outputs
+        config: amplifyConfig
     });
 
     let session = await runWithAmplifyServerContext({
@@ -30,9 +30,14 @@ export default async function getAuthState(): Promise<GetAuthStateReturnValue> {
         idToken !== undefined
     );
 
+    // Cognito omits `cognito:groups` entirely when the user belongs to no groups,
+    // so this cannot be cast to string[] and indexed directly.
+    const groups = accessToken?.payload['cognito:groups'];
+
     const isUserAdmin = (
         isUserAuthenticated &&
-        (accessToken.payload['cognito:groups'] as string[]).includes(ADMIN_GROUP)
+        Array.isArray(groups) &&
+        groups.includes(ADMIN_GROUP)
     )
 
     return {

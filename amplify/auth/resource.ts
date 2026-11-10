@@ -21,6 +21,7 @@ export const auth = defineAuth({
       },
       scopes: [
         'EMAIL',
+        'OPENID',  // required, else Cognito issues no ID token and SSR sees no session
         'PROFILE',
         'COGNITO_ADMIN'  // used to call `fetchUserAttributes()`
       ],

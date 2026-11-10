@@ -2,28 +2,20 @@
 
 import useAmplify from '@/app/hooks/use-amplify'
 import 'aws-amplify/auth/enable-oauth-listener';
-import { Hub } from 'aws-amplify/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
-import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import handleError from '@/app/utils/handle-error';
+import listenForSignIn from '@/app/utils/listen-for-sign-in';
 
 export default function LoginRedirect() {
     useAmplify();
-    const router = useRouter();
 
-    Hub.listen('auth', async ({ payload }) => {
-        switch (payload.event) {
-            case 'signInWithRedirect':
-                router.push('/');
-                break;
-            case 'signInWithRedirect_failure':
-                handleError(payload);
-                break;
-            default:
-                break;
-        }
-    });
+    useEffect(() => listenForSignIn(() => {
+        // Start a fresh server request with the new cookies and clear logged-out
+        // route state. Replace also keeps the OAuth callback out of Back history.
+        window.location.replace('/');
+    }, handleError), []);
 
     return (
         <div className='flex items-center justify-center h-full'>
