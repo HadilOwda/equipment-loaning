@@ -59,22 +59,23 @@ export default async function CurrentRequests() {
             </div>
             <div className='grid grid-cols-2 gap-4'>
                 {requests.map(request => {
-                    let badgeLabel: string;
-                    let isBadgeVariantDefault = false;
-                    if (request.pastAssignment) {
-                        badgeLabel = 'Returned';
-                    } else if (request.assignment) {
-                        if (request.status == RequestStatus.CHECKED_OUT) {
-                            badgeLabel = 'Checked out';
-                        } else if (request.status == RequestStatus.DENIED) {
-                            badgeLabel = 'Denied';
-                        } else {
-                            badgeLabel = 'Request Approved!';
-                            isBadgeVariantDefault = true;
-                        }
+                   let badgeLabel: string;
+                let isBadgeVariantDefault = false;
+                
+                if (request.status === RequestStatus.DENIED) {
+                    badgeLabel = 'Denied';
+                } else if (request.pastAssignment) {
+                    badgeLabel = 'Returned';
+                } else if (request.assignment) {
+                    if (request.status === RequestStatus.CHECKED_OUT) {
+                        badgeLabel = 'Checked out';
                     } else {
-                        badgeLabel = 'Request Pending'
+                        badgeLabel = 'Request Approved!';
+                        isBadgeVariantDefault = true;
                     }
+                } else {
+                    badgeLabel = 'Request Pending';
+                }
 
                     return (
                         <Item variant='outline' key={request.id} asChild className='items-start'>
