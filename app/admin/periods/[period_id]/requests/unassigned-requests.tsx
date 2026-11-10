@@ -15,7 +15,6 @@ import { AlertCircleIcon } from 'lucide-react';
 import generateClient from '@/app/utils/generate-client';
 import handleError from '@/app/utils/handle-error';
 import { toast } from 'sonner';
-import { UserDisplayNames } from '../display-names-config';
 import { useRouter } from 'next/navigation';
 
 interface UnassignedRequestsProps {
