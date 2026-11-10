@@ -1,4 +1,4 @@
-import { PeriodType } from '@/amplify/data/constants';
+import { PeriodType, RequestStatus } from '@/amplify/data/constants';
 import generateSSRClient from '@/app/utils/generate-ssr-client';
 import Container from '@/components/primitives/container';
 import Header from '@/components/primitives/text/header';
@@ -148,9 +148,11 @@ function PeriodLoanableEquipment({ period }: { period: PeriodWithDetails }) {
 }
 
 function PeriodRequestsSummary({ period }: { period: PeriodWithDetails }) {
-  const unassignedRequests = period.requests.filter((r) => !r.assignment && !r.pastAssignment).length;
-  const assignedRequests = period.requests.filter((r) => r.assignment).length;
-  const totalRequests = period.requests.length;
+  const isDenied = (r: PeriodWithDetails['requests'][number]) => r.status === RequestStatus.DENIED;
+  const deniedRequests = period.requests.filter(isDenied).length;
+  const unassignedRequests = period.requests.filter((r) => !isDenied(r) && !r.assignment && !r.pastAssignment).length;
+  const assignedRequests = period.requests.filter((r) => !isDenied(r) && r.assignment).length;
+  const returnedRequests = period.requests.filter((r) => !isDenied(r) && !r.assignment && r.pastAssignment).length;
 
   return (
     <div>
@@ -164,7 +166,8 @@ function PeriodRequestsSummary({ period }: { period: PeriodWithDetails }) {
       <AttributeGrid className='mb-2'>
         <Attribute label='Unassigned request count' value={`${unassignedRequests} unassigned`} />
         <Attribute label='Assigned (in progress) request count' value={`${assignedRequests} assigned`} />
-        <Attribute label='Assigned (returned) request count' value={`${totalRequests - unassignedRequests - assignedRequests} returned`} />
+        <Attribute label='Assigned (returned) request count' value={`${returnedRequests} returned`} />
+        <Attribute label='Denied request count' value={`${deniedRequests} denied`} />
       </AttributeGrid>
 
       <Button asChild>

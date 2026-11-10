@@ -17,7 +17,7 @@ export function RequestMatchingItem({ requestId, displayName, children }: Reques
             <div className='col-span-1 flex items-center justify-center'>
                 <ArrowRight />
             </div>
-            <div className='col-span-4 flex items-center'>
+            <div className='col-span-4 flex items-center gap-2'>
                 {children}
             </div>
             <div className='col-span-2 flex justify-end'>
