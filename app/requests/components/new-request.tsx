@@ -14,8 +14,10 @@ import { Button } from '@/components/ui/button';
 import generateClient from '@/app/utils/generate-client';
 import handleError from '@/app/utils/handle-error';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 export default function NewRequest({ periods }: { periods: Period[] }) {
+    const router = useRouter();
     const [periodId, setPeriodId] = useState('');
     const [selectedEquipmentTypeIds, setSelectedEquipmentTypeIds] = useState<string[]>([]);
     const [collateral, setCollateral] = useState('');
@@ -32,50 +34,83 @@ export default function NewRequest({ periods }: { periods: Period[] }) {
     );
 
     const handleSubmit = async () => {
+        if (!canSubmit || isLoading) return;
+
         setIsLoading(true);
 
-        const client = generateClient();
-        const request = await client.models.Request.create({
-            periodId,
-            collateralDescription: collateral,
-        });
+        try {
+            const client = generateClient();
 
-        if (request.errors) {
-            handleError(request.errors);
-            setIsLoading(false);
-            return;
-        }
+            // Read the latest period state rather than trusting the initial page data.
+            const { data: currentPeriod, errors: periodErrors } =
+                await client.models.Period.get({ id: periodId });
 
-        const requestId = request.data?.id;
-        if (!requestId) {
-            handleError('Expected nonnull returned requestId, but got null');
-            setIsLoading(false);
-            return;
-        }
-
-        // APPROVAL periods are unranked; MATCH periods rank by selection order
-        const isRanked = selectedPeriod?.periodType == PeriodType.MATCH;
-        const equipmentTypeRequsts = await Promise.all(selectedEquipmentTypeIds.map((equipmentTypeId, i) =>
-            client.models.EquipmentTypeRequest.create({ equipmentTypeId, requestId, rank: isRanked ? i+1 : undefined })
-        ));
-
-        let hasErrors = false;
-        equipmentTypeRequsts.map(({ errors }) => {
-            if (errors) {
-                handleError(errors);
-                hasErrors = true;
+            if (periodErrors?.length) {
+                handleError(periodErrors);
+                toast.error('Unable to verify the loaning period. Please try again.');
+                return;
             }
-        });
 
-        if (!hasErrors) {
-            setPeriodId('');
-            setSelectedEquipmentTypeIds([]);
-            setCollateral('');
+            if (!currentPeriod) {
+                toast.error('This loaning period could not be found. Please refresh the page.');
+                return;
+            }
 
-            toast.info('Requested created (reload page to see updates)');
+            const endTime = Date.parse(currentPeriod.endDateTime);
+
+            if (
+                currentPeriod.acceptingRequests !== true ||
+                !Number.isFinite(endTime) ||
+                Date.now() >= endTime
+            ) {
+                toast.error('This loaning period is no longer accepting requests.');
+                return;
+            }
+
+            const request = await client.models.Request.create({
+                periodId,
+                collateralDescription: collateral,
+            });
+
+            if (request.errors) {
+                handleError(request.errors);
+                return;
+            }
+
+            const requestId = request.data?.id;
+            if (!requestId) {
+                handleError('Expected nonnull returned requestId, but got null');
+                return;
+            }
+
+            // APPROVAL periods are unranked; MATCH periods rank by selection order
+            const isRanked = selectedPeriod?.periodType == PeriodType.MATCH;
+            const equipmentTypeRequests = await Promise.all(selectedEquipmentTypeIds.map((equipmentTypeId, i) =>
+                client.models.EquipmentTypeRequest.create({ equipmentTypeId, requestId, rank: isRanked ? i + 1 : undefined })
+            ));
+
+            let hasErrors = false;
+            equipmentTypeRequests.forEach(({ errors }) => {
+                if (errors) {
+                    handleError(errors);
+                    hasErrors = true;
+                }
+            });
+
+            if (!hasErrors) {
+                setPeriodId('');
+                setSelectedEquipmentTypeIds([]);
+                setCollateral('');
+
+                toast.success('Request created');
+                router.refresh();
+            }
+        } catch (error) {
+            handleError(error instanceof Error ? error.message : 'Unexpected error while submitting request');
+            toast.error('Request submission failed. Please try again.');
+        } finally {
+            setIsLoading(false);
         }
-
-        setIsLoading(false);
     }
 
     return (
@@ -88,6 +123,7 @@ export default function NewRequest({ periods }: { periods: Period[] }) {
                     inputID='new-request-period'
                     placeholder='e.g. Immerse the Bay 2025'
                     label='Loaning Period'
+                    emptyMessage='No periods available'
                     queryData={async () => periods.map(p => ({
                         label: p.name,
                         value: p.id

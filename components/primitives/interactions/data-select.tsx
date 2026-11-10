@@ -10,7 +10,7 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import InputLabel from './input-label';
-import { Suspense, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 interface Item {
@@ -27,6 +27,7 @@ interface DataSelectProps {
     onChange: (val: string) => void;
     queryData: () => Promise<Item[]>;
     className?: string;
+    emptyMessage?: string;
 }
 
 export function DataSelect({
@@ -37,12 +38,15 @@ export function DataSelect({
     value,
     onChange,
     queryData,
-    className
+    className,
+    emptyMessage = 'No options available'
 }: DataSelectProps) {
     const [dataOptions, setDataOptions] = useState<Item[]>([]);
+    const [hasLoaded, setHasLoaded] = useState(false);
 
     const getDataOptions = async () => {
         setDataOptions(await queryData());
+        setHasLoaded(true);
     };
 
     useEffect(() => {
@@ -64,7 +68,7 @@ export function DataSelect({
                             >{item.label}</SelectItem>
                         )
                         :
-                        <SelectLabel>Loading...</SelectLabel>
+                        <SelectLabel>{hasLoaded ? emptyMessage : 'Loading...'}</SelectLabel>
                     }
                 </SelectGroup>
             </SelectContent>
