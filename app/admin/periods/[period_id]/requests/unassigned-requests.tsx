@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircleIcon } from 'lucide-react';
 import generateClient from '@/app/utils/generate-client';
 import handleError from '@/app/utils/handle-error';
+import validateAssignments from '@/app/utils/validate-assignments';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
@@ -80,28 +81,57 @@ const unassignedRequests = period.requests.filter(
     }
 
     const saveAssignments = async () => {
+        const assignments = newAssignments.map(assignment => ({ ...assignment }));
         setIsLoading(true);
-        const results = await Promise.all(newAssignments.map((assignment) => {
-            return client.models.Request.update({
-                id: assignment.requestId,
-                assignmentId: assignment.equipmentId
-            });
-        }));
-
-        let hasErrors = false;
-        results.map(({ errors }) => {
-            if (errors) {
-                hasErrors = true;
-                handleError(errors);
+        try {
+            // The page's equipment snapshot may be stale. Recheck before any writes.
+            const equipmentResults = await Promise.all(assignments.map(({ equipmentId }) =>
+                client.models.Equipment.get({ id: equipmentId }, {
+                    selectionSet: ['id', 'assignment.id']
+                })
+            ));
+            const equipmentErrors = equipmentResults.flatMap(({ errors }) => errors ?? []);
+            if (equipmentErrors.length > 0) {
+                handleError(equipmentErrors);
+                return;
             }
-        });
 
-        if (!hasErrors) {
-            setNewAssignments([]);
-            toast.success('Assignments updated');
-            router.refresh();
+            if (equipmentResults.some(({ data }) => !data)) {
+                toast.error('Selected equipment is no longer available. Reload the page and try again.');
+                return;
+            }
+            const assignedEquipmentIds = equipmentResults.flatMap(({ data }) => data?.assignment ? [data.id] : []);
+            const validationError = validateAssignments(assignments, assignedEquipmentIds);
+            if (validationError) {
+                toast.error(validationError);
+                return;
+            }
+
+            const results = await Promise.all(assignments.map((assignment) => {
+                return client.models.Request.update({
+                    id: assignment.requestId,
+                    assignmentId: assignment.equipmentId
+                });
+            }));
+
+            let hasErrors = false;
+            results.forEach(({ errors }) => {
+                if (errors?.length) {
+                    hasErrors = true;
+                    handleError(errors);
+                }
+            });
+
+            if (!hasErrors) {
+                setNewAssignments([]);
+                toast.success('Assignments updated');
+                router.refresh();
+            }
+        } catch (error) {
+            handleError(error);
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
     }
 
     if (unassignedRequests.length == 0) {
@@ -163,8 +193,8 @@ const unassignedRequests = period.requests.filter(
                         Confirm that request assignments are correct before submitting
                     </AlertTitle>
                     <AlertDescription>
-                        Once given an assignment, any further changes to a request&apos;s equipment assignment will need to
-                        be performed manually on the AWS console.
+                        Assignments are shared with users when you select Save Assignments.
+                        Review your selections before saving.
                     </AlertDescription>
                 </Alert>
                 <div className='flex flex-col gap-2'>
