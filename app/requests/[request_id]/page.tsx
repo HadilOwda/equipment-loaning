@@ -5,6 +5,10 @@ import { requestWithDetailsSelectionSet } from './request-details-config';
 import RequestAttributes from './components/request-attributes';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
+import EditRequestForm from './components/edit-request-form';
+import CancelRequestButton from './components/cancel-request-button';
+import { periodSelectionSet } from '../period-config';
+import { RequestStatus } from '@/amplify/data/constants';
 
 interface RequestPageProps {
 	params: {
@@ -33,6 +37,26 @@ export default async function RequestPage({ params }: RequestPageProps) {
 			</div>
 		);
 	}
+	
+const { data: period, errors: periodErrors } =
+    await client.models.Period.get(
+        { id: request.period.id },
+        { selectionSet: periodSelectionSet }
+    );
+
+if (periodErrors?.length) {
+    throw new Error(JSON.stringify(periodErrors));
+}
+
+	if (!period) {
+    throw new Error('Loaning period not found');
+}
+
+const canModifyRequest =
+    !request.assignment &&
+    !request.pastAssignment &&
+    request.status !== RequestStatus.DENIED &&
+    request.status !== RequestStatus.CHECKED_OUT;
 
 	return (
 		<Container width='tight'>
@@ -42,6 +66,19 @@ export default async function RequestPage({ params }: RequestPageProps) {
 			</Link>
 			<Title>Request for {request.period.name}</Title>
 			<RequestAttributes request={request} />
+			
+{canModifyRequest && (
+    <div className='flex flex-col gap-4 mt-6'>
+        <EditRequestForm
+            request={request}
+            period={period}
+        />
+        <CancelRequestButton
+            requestId={request.id}
+        />
+    </div>
+)}
+
 		</Container>
 	);
 }

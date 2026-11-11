@@ -6,6 +6,7 @@ export const requestWithDetailsSelectionSet = [
     'status',
     'collateralDescription',
     'createdAt',
+    'period.id',
     'period.name',
 
     'equipmentTypeRequests.rank',
