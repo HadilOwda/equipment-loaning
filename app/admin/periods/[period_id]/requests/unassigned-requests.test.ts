@@ -4,6 +4,7 @@ import { RequestStatus } from '@/amplify/data/constants';
 import { toast } from 'sonner';
 import handleError from '@/app/utils/handle-error';
 import UnassignedRequests from './unassigned-requests';
+import type { PeriodRequests } from './period-requests-config';
 
 interface EquipmentResult {
     data: { id: string; assignment: { id: string } | null } | null;
@@ -54,7 +55,8 @@ describe('UnassignedRequests integration with current main', () => {
     ];
 
     const render = (selected = assignments, denied = false) => UnassignedRequests({
-        period: {
+        // Fixtures are partial, and the generated types mark relations as non-null
+        period: ({
             name: 'Test period',
             periodType: 'MATCH',
             loanableEquipment: assignments.map(({ equipmentId }) => ({ equipment: {
@@ -64,7 +66,7 @@ describe('UnassignedRequests integration with current main', () => {
                 id: requestId, owner: 'student', status: denied ? RequestStatus.DENIED : null,
                 assignment: null, pastAssignment: null, equipmentTypeRequests: []
             }))
-        },
+        } as unknown as PeriodRequests),
         newAssignments: selected,
         setNewAssignments: mockSetAssignments,
         userDisplayNames: []
