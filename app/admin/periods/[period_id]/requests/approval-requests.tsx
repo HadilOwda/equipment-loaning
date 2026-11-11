@@ -18,6 +18,8 @@ import handleError from '@/app/utils/handle-error';
 import validateAssignments from '@/app/utils/validate-assignments';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import RequestSearchInput from './request-search-input';
+import filterRequestsBySearch from './filter-requests-by-search';
 import { toast } from 'sonner';
 
 type PeriodRequest = PeriodRequests['requests'][number];
@@ -27,21 +29,36 @@ interface ApprovalRequestsProps {
     userDisplayNames: UserDisplayNames;
 }
 
+const ALL_SECTIONS = ['pending-requests', 'approved-requests', 'denied-requests'];
+
 export default function ApprovalRequests({ period, userDisplayNames }: ApprovalRequestsProps) {
-    const isUnassigned = (r: PeriodRequest) => !r.assignment && !r.pastAssignment;
-    const pendingRequests = period.requests.filter(r => isUnassigned(r) && r.status != RequestStatus.DENIED);
-    const deniedRequests = period.requests.filter(r => isUnassigned(r) && r.status == RequestStatus.DENIED);
-    const approvedRequests = period.requests.filter(
-        r => (r.assignment || r.pastAssignment) && r.status != RequestStatus.DENIED
-    );
+    const [search, setSearch] = useState('');
+    const [openSections, setOpenSections] = useState<string[]>(['pending-requests']);
 
     const getDisplayName = (request: PeriodRequest) =>
         userDisplayNames.find(u => request.owner == u?.username)?.displayName ?? 'USER NOT FOUND';
 
+    // Only the lists are filtered; `period` stays whole so equipment availability is unaffected
+    const visibleRequests = filterRequestsBySearch(period.requests, search, getDisplayName);
+    const visiblePeriod = { ...period, requests: visibleRequests };
+
+    const isUnassigned = (r: PeriodRequest) => !r.assignment && !r.pastAssignment;
+    const pendingRequests = visibleRequests.filter(r => isUnassigned(r) && r.status != RequestStatus.DENIED);
+    const deniedRequests = visibleRequests.filter(r => isUnassigned(r) && r.status == RequestStatus.DENIED);
+    const approvedRequests = visibleRequests.filter(
+        r => (r.assignment || r.pastAssignment) && r.status != RequestStatus.DENIED
+    );
+
     return (
         <Container>
             <Title>{period.name} Requests</Title>
-            <Accordion type='multiple' defaultValue={['pending-requests']}>
+            <RequestSearchInput value={search} onChange={setSearch} />
+            {/* While searching, every section is expanded so no match is hidden */}
+            <Accordion
+                type='multiple'
+                value={search.trim() !== '' ? ALL_SECTIONS : openSections}
+                onValueChange={setOpenSections}
+            >
                 <AccordionItem value='pending-requests'>
                     <AccordionTrigger>
                         <Header className='mb-0'>Pending Requests ({pendingRequests.length})</Header>
@@ -60,7 +77,7 @@ export default function ApprovalRequests({ period, userDisplayNames }: ApprovalR
                         <Header className='mb-0'>Approved Requests ({approvedRequests.length})</Header>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <AssignedRequests period={period} userDisplayNames={userDisplayNames} />
+                        <AssignedRequests period={visiblePeriod} userDisplayNames={userDisplayNames} />
                     </AccordionContent>
                 </AccordionItem>
 
