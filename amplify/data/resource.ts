@@ -22,10 +22,10 @@ const schema = a.schema({
     ]),
 
   Request: a.model({
-    
+    // Set automatically to the creating user. Students can read it but never change it.
     owner: a.string().authorization(allow => [
-        allow.owner().to(['read', 'delete']),
-        allow.group(ADMIN_GROUP)
+      allow.owner().to(['read', 'delete']),
+      allow.group(ADMIN_GROUP)
     ]),
 
     id: a.id().required()
@@ -33,15 +33,18 @@ const schema = a.schema({
         allow.owner(),
         allow.group(ADMIN_GROUP)
       ]),
+
+    // Students may edit their collateral description
     collateralDescription: a.string().required()
       .authorization(allow => [
         allow.owner(),
         allow.group(ADMIN_GROUP)
       ]),
 
+    // Set once when the request is created; students cannot move it to another period
     periodId: a.id().required()
       .authorization(allow => [
-        allow.owner(),
+        allow.owner().to(['create', 'read', 'delete']),
         allow.group(ADMIN_GROUP)
       ]),
     period: a.belongsTo('Period', 'periodId')
@@ -56,33 +59,37 @@ const schema = a.schema({
         allow.group(ADMIN_GROUP)
       ]),
 
-    // Admin only
-status: a.ref('RequestStatusEnum')
-    .authorization(allow => [
+    // Admin only. Students can read these but never set them. Students need 'delete' here
+    // because AppSync refuses to delete a record unless the caller may delete every
+    // field-protected field on it (they could clear, but never set, these via the API).
+    // (`status` uses a.ref so that field-level authorization can be applied to it.)
+    status: a.ref('RequestStatusEnum')
+      .authorization(allow => [
         allow.group(ADMIN_GROUP),
-        allow.owner().to(['read'])
-    ]),
-    
+        allow.owner().to(['read', 'delete'])
+      ]),
 
-assignmentId: a.id()
-    .authorization(allow => [
+    assignmentId: a.id()
+      .authorization(allow => [
         allow.group(ADMIN_GROUP),
-        allow.owner().to(['read'])
-    ]),
+        allow.owner().to(['read', 'delete'])
+      ]),
     assignment: a.belongsTo('Equipment', 'assignmentId'),
 
-
-pastAssignmentId: a.id()
-    .authorization(allow => [
+    pastAssignmentId: a.id()
+      .authorization(allow => [
         allow.group(ADMIN_GROUP),
-        allow.owner().to(['read'])
-    ]),
+        allow.owner().to(['read', 'delete'])
+      ]),
     pastAssignment: a.belongsTo('Equipment', 'pastAssignmentId')
   })
-  .authorization(allow => [
-  allow.owner().to(['get', 'list', 'update', 'delete']),
-  allow.group(ADMIN_GROUP)
-]),
+    // Default for the model as a whole: students can read and cancel (delete) their own
+    // requests. Updates are controlled per field above, so any field added later without
+    // its own rule stays read-only for students.
+    .authorization(allow => [
+      allow.owner().to(['get', 'list', 'delete']),
+      allow.group(ADMIN_GROUP)
+    ]),
 
   EquipmentType: a.model({
     id: a.id().required(),

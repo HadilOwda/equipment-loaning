@@ -167,6 +167,30 @@ describe('saveRequestEdits', () => {
         expect(operations.updateRequest).not.toHaveBeenCalled();
     });
 
+    it('saves preferences without ranks for unranked (APPROVAL) periods', async () => {
+        const operations = makeOperations();
+
+        await saveRequestEdits(
+            'request-1',
+            'Stanford ID',
+            ['equipment-1', 'equipment-2'],
+            ['equipment-1'],
+            operations,
+            false
+        );
+
+        expect(operations.updatePreference).toHaveBeenCalledWith({
+            equipmentTypeId: 'equipment-1',
+            requestId: 'request-1',
+            rank: undefined,
+        });
+        expect(operations.createPreference).toHaveBeenCalledWith({
+            equipmentTypeId: 'equipment-2',
+            requestId: 'request-1',
+            rank: undefined,
+        });
+    });
+
     it('reports a failed collateral update', async () => {
         const operations = makeOperations({
             updateRequest: jest.fn(async () => ({

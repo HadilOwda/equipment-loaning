@@ -8,11 +8,12 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { TextInputWithLabel } from '@/components/primitives/interactions/text-input-with-label';
 import EquipmentTypeList from '../../components/equipment-type-list';
+import EquipmentTypeListApproval from '../../components/equipment-type-list-approval';
 
 import type { Period } from '../../period-config';
 import type { RequestWithDetails } from '../request-details-config';
 
-import { RequestStatus } from '@/amplify/data/constants';
+import { PeriodType, RequestStatus } from '@/amplify/data/constants';
 import generateClient from '@/app/utils/generate-client';
 import handleError from '@/app/utils/handle-error';
 import { saveRequestEdits } from './edit-request-operation';
@@ -27,6 +28,9 @@ export default function EditRequestForm({
     period,
 }: EditRequestFormProps) {
     const router = useRouter();
+
+    // MATCH periods rank equipment by preference; APPROVAL periods do not
+    const isRanked = period.periodType === PeriodType.MATCH;
 
     const initialEquipmentTypeIds = [...request.equipmentTypeRequests]
         .sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
@@ -186,7 +190,8 @@ export default function EditRequestForm({
 
                     updateRequest: (input) =>
                         client.models.Request.update(input),
-                }
+                },
+                isRanked
             );
 
             toast.success('Request updated successfully.');
@@ -226,15 +231,27 @@ export default function EditRequestForm({
                 Edit Request
             </h2>
 
-            <EquipmentTypeList
-                period={period}
-                selectedEquipmentTypeIds={
-                    selectedEquipmentTypeIds
-                }
-                setSelectedEquipmentTypeIds={
-                    setSelectedEquipmentTypeIds
-                }
-            />
+            {isRanked ?
+                <EquipmentTypeList
+                    period={period}
+                    selectedEquipmentTypeIds={
+                        selectedEquipmentTypeIds
+                    }
+                    setSelectedEquipmentTypeIds={
+                        setSelectedEquipmentTypeIds
+                    }
+                />
+                :
+                <EquipmentTypeListApproval
+                    period={period}
+                    selectedEquipmentTypeIds={
+                        selectedEquipmentTypeIds
+                    }
+                    setSelectedEquipmentTypeIds={
+                        setSelectedEquipmentTypeIds
+                    }
+                />
+            }
 
             <TextInputWithLabel
                 inputID='edit-request-collateral'

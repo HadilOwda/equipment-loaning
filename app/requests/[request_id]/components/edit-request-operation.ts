@@ -7,7 +7,7 @@ type OperationResult = {
 type PreferenceInput = {
     equipmentTypeId: string;
     requestId: string;
-    rank: number;
+    rank?: number;  // omitted for unranked (APPROVAL) periods
 };
 
 type PreferenceIdentifier = {
@@ -41,7 +41,8 @@ export async function saveRequestEdits(
     collateral: string,
     selectedEquipmentTypeIds: string[],
     existingEquipmentTypeIds: string[],
-    operations: EditRequestOperations
+    operations: EditRequestOperations,
+    isRanked: boolean = true  // MATCH periods rank by selection order; APPROVAL periods are unranked
 ): Promise<void> {
     if (
         !collateral.trim() ||
@@ -62,7 +63,7 @@ export async function saveRequestEdits(
         const input = {
             equipmentTypeId,
             requestId,
-            rank: index + 1,
+            rank: isRanked ? index + 1 : undefined,
         };
 
         const result = existingIds.has(equipmentTypeId)
