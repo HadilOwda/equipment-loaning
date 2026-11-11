@@ -6,11 +6,13 @@ import CheckboxWithDescription from '@/components/primitives/interactions/checkb
 import Subtext from '@/components/primitives/text/subtext';
 import { CheckedState } from '@radix-ui/react-checkbox';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 
 interface LoanableEquipmentChecklistProps {
     value: string[];
     onChange: (equipmentIds: string[]) => void;  // write only
+    assignedEquipmentIds?: string[];
 }
 
 type EquipmentTypeAndEquipment = {
@@ -19,7 +21,7 @@ type EquipmentTypeAndEquipment = {
     equipmentIds: string[];
 }
 
-export default function LoanableEquipmentChecklist({ value, onChange }: LoanableEquipmentChecklistProps) {
+export default function LoanableEquipmentChecklist({ value, onChange, assignedEquipmentIds = [] }: LoanableEquipmentChecklistProps) {
     const client = generateClient();
     const [equipmentByTypes, setEquipmentByTypes] = useState<EquipmentTypeAndEquipment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -61,9 +63,13 @@ export default function LoanableEquipmentChecklist({ value, onChange }: Loanable
     }
 
     const uncheckEquipmentIdsIfNotAlready = (equipmentIds: string[]) => {
-        onChange(value.filter(
-            (id) => !equipmentIds.includes(id)
-        ));
+        if (equipmentIds.some(id => value.includes(id) && assignedEquipmentIds.includes(id))) {
+            toast.error('Assigned or checked-out equipment cannot be removed.');
+        }
+        const nextValue = value.filter(id => !equipmentIds.includes(id) || assignedEquipmentIds.includes(id));
+        if (nextValue.length !== value.length) {
+            onChange(nextValue);
+        }
     }
 
     if (isLoading) {
@@ -117,6 +123,7 @@ export default function LoanableEquipmentChecklist({ value, onChange }: Loanable
                                             <CheckboxWithDescription
                                                 inputID={`loanable-equipment-checklist-equipment-${equipmentId}`}
                                                 label={equipmentId}
+                                                description={assignedEquipmentIds.includes(equipmentId) ? 'Assigned or checked out; cannot be removed' : undefined}
                                                 value={value.includes(equipmentId)}
                                                 onChange={(val) => {
                                                     if (val == 'indeterminate') {
@@ -124,7 +131,7 @@ export default function LoanableEquipmentChecklist({ value, onChange }: Loanable
                                                     } else if (val) {
                                                         onChange(value.concat([equipmentId]));
                                                     } else {
-                                                        onChange(value.filter((id) => id != equipmentId));
+                                                        uncheckEquipmentIdsIfNotAlready([equipmentId]);
                                                     }
                                                 }}
                                             />

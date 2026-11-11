@@ -11,6 +11,7 @@ export const periodWithDetailsSelectionSet = [
 
     'loanableEquipment.equipment.id',
     'loanableEquipment.equipment.assignment.id',
+    'loanableEquipment.equipment.assignment.status',
     'loanableEquipment.equipment.equipmentType.name',
 
     'requests.status',
