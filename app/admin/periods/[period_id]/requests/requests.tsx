@@ -22,6 +22,8 @@ import { AlertCircleIcon } from 'lucide-react';
 import { UserDisplayNames } from '../display-names-config';
 import { RequestStatus } from '@/amplify/data/constants';
 import Subtext from '@/components/primitives/text/subtext';
+import RequestSearchInput from './request-search-input';
+import filterRequestsBySearch from './filter-requests-by-search';
 
 export interface Assignment {
     equipmentId: string;
@@ -30,21 +32,37 @@ export interface Assignment {
 
 export default function Requests({ period, userDisplayNames }: { period: PeriodRequests, userDisplayNames: UserDisplayNames }) {
     const [newAssignments, setNewAssignments] = useState<Assignment[]>([]);
+    const [search, setSearch] = useState('');
+    const [openSections, setOpenSections] = useState<string[]>(['unassigned-requests']);
 
-    const assignedCount = period.requests.filter(
+    const getDisplayName = (request: PeriodRequests['requests'][number]) =>
+        userDisplayNames.find(u => request.owner == u?.username)?.displayName ?? 'USER NOT FOUND';
+
+    // Only the lists are filtered. The matchmaker and Available Equipment keep using the
+    // whole `period`, so searching never changes what the algorithm or equipment list sees.
+    const visibleRequests = filterRequestsBySearch(period.requests, search, getDisplayName);
+    const visiblePeriod = { ...period, requests: visibleRequests };
+
+    const assignedCount = visibleRequests.filter(
         r => (r.assignment || r.pastAssignment) && r.status !== RequestStatus.DENIED
     ).length;
-    const unassignedCount = period.requests.filter(
+    const unassignedCount = visibleRequests.filter(
         r => !r.assignment && !r.pastAssignment && r.status !== RequestStatus.DENIED
     ).length;
-    const deniedRequests = period.requests.filter(r => r.status === RequestStatus.DENIED);
+    const deniedRequests = visibleRequests.filter(r => r.status === RequestStatus.DENIED);
 
     return (
         <Container>
             <Title>{period.name} Requests</Title>
+            <RequestSearchInput value={search} onChange={setSearch} />
             <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
                 <div className='col-span1 lg:col-span-2'>
-                    <Accordion type='multiple' defaultValue={['unassigned-requests']}>
+                    {/* While searching, every section is expanded so no match is hidden */}
+                    <Accordion
+                        type='multiple'
+                        value={search.trim() !== '' ? ['assigned-requests', 'unassigned-requests', 'denied-requests'] : openSections}
+                        onValueChange={setOpenSections}
+                    >
                         {/* Assigned requests */}
                         <AccordionItem value='assigned-requests'>
                             <AccordionTrigger>
@@ -54,7 +72,7 @@ export default function Requests({ period, userDisplayNames }: { period: PeriodR
                             </AccordionTrigger>
                             <AccordionContent>
                                 <AssignedRequests
-                                    period={period}
+                                    period={visiblePeriod}
                                     userDisplayNames={userDisplayNames}
                                 />
                             </AccordionContent>
@@ -69,7 +87,7 @@ export default function Requests({ period, userDisplayNames }: { period: PeriodR
                             </AccordionTrigger>
                             <AccordionContent>
                                 <UnassignedRequests
-                                    period={period}
+                                    period={visiblePeriod}
                                     newAssignments={newAssignments}
                                     setNewAssignments={setNewAssignments}
                                     userDisplayNames={userDisplayNames}
