@@ -28,9 +28,12 @@ export default async function AdminPeriodRequestsPage({ params }: AdminPeriodReq
 		return <PeriodNotFound periodID={params.period_id} />;
 	}
 
-	const userDisplayNames = await client.queries.getUserDisplayNames({
-		usernames: period.data.requests.map(r => r.owner).filter(r => r != null)
-	});
+	// Unique usernames only, so the Lambda has fewer names to look up
+	const usernames = Array.from(new Set(
+		period.data.requests.map(r => r.owner).filter((owner): owner is string => owner != null)
+	));
+
+	const userDisplayNames = await client.queries.getUserDisplayNames({ usernames });
 
 	if (userDisplayNames.errors) {
 		throw new Error(JSON.stringify(userDisplayNames.errors));

@@ -29,8 +29,6 @@ export default function UnassignedRequests({ period, newAssignments, setNewAssig
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
 
-    console.log(period)
-
     // Here, unassigned requests denote requests that are unassigned at the time of page load --
     // that is, selecting a value from EquipmentSelect will not move the request to Assigned Requests
 const unassignedRequests = period.requests.filter(
