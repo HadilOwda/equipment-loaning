@@ -59,23 +59,25 @@ export default async function CurrentRequests() {
             </div>
             <div className='grid grid-cols-2 gap-4'>
                 {requests.map(request => {
-                   let badgeLabel: string;
-                let isBadgeVariantDefault = false;
-                
-                if (request.status === RequestStatus.DENIED) {
-                    badgeLabel = 'Denied';
-                } else if (request.pastAssignment) {
-                    badgeLabel = 'Returned';
-                } else if (request.assignment) {
-                    if (request.status === RequestStatus.CHECKED_OUT) {
-                        badgeLabel = 'Checked out';
+                    let badgeLabel: string;
+                    let badgeVariant: 'secondary' | 'destructive' = 'secondary';
+                    let badgeClassName = '';
+
+                    if (request.status === RequestStatus.DENIED) {
+                        badgeLabel = 'Denied';
+                        badgeVariant = 'destructive';
+                    } else if (request.pastAssignment) {
+                        badgeLabel = 'Returned';
+                    } else if (request.assignment) {
+                        if (request.status === RequestStatus.CHECKED_OUT) {
+                            badgeLabel = 'Checked out';
+                        } else {
+                            badgeLabel = 'Request Approved!';
+                            badgeClassName = 'bg-green-600 text-white';
+                        }
                     } else {
-                        badgeLabel = 'Request Approved!';
-                        isBadgeVariantDefault = true;
+                        badgeLabel = 'Request Pending';
                     }
-                } else {
-                    badgeLabel = 'Request Pending';
-                }
 
                     return (
                         <Item variant='outline' key={request.id} asChild className='items-start'>
@@ -86,7 +88,7 @@ export default async function CurrentRequests() {
                                         <ItemDescription>Created {dayjs(request.createdAt).format('M/D/YY')}</ItemDescription>
                                     </div>
                                     <div>
-                                        <Badge variant={isBadgeVariantDefault ? 'default' : 'secondary'}>{badgeLabel}</Badge>
+                                        <Badge variant={badgeVariant} className={badgeClassName}>{badgeLabel}</Badge>
                                     </div>
                                 </ItemContent>
                             </Link>

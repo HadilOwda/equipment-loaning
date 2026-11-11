@@ -31,6 +31,9 @@ export default function ApprovalRequests({ period, userDisplayNames }: ApprovalR
     const isUnassigned = (r: PeriodRequest) => !r.assignment && !r.pastAssignment;
     const pendingRequests = period.requests.filter(r => isUnassigned(r) && r.status != RequestStatus.DENIED);
     const deniedRequests = period.requests.filter(r => isUnassigned(r) && r.status == RequestStatus.DENIED);
+    const approvedRequests = period.requests.filter(
+        r => (r.assignment || r.pastAssignment) && r.status != RequestStatus.DENIED
+    );
 
     const getDisplayName = (request: PeriodRequest) =>
         userDisplayNames.find(u => request.owner == u?.username)?.displayName ?? 'USER NOT FOUND';
@@ -54,7 +57,7 @@ export default function ApprovalRequests({ period, userDisplayNames }: ApprovalR
 
                 <AccordionItem value='approved-requests'>
                     <AccordionTrigger>
-                        <Header className='mb-0'>Approved Requests</Header>
+                        <Header className='mb-0'>Approved Requests ({approvedRequests.length})</Header>
                     </AccordionTrigger>
                     <AccordionContent>
                         <AssignedRequests period={period} userDisplayNames={userDisplayNames} />
@@ -222,6 +225,7 @@ function PendingRequests({ period, requests, getDisplayName }: PendingRequestsPr
                                 />
                             </div>
                             <Button
+                                className='bg-green-600 text-white hover:bg-green-700'
                                 disabled={!selections[request.id] || isLoading}
                                 onClick={() => approveRequest(request.id)}
                             >
@@ -229,7 +233,13 @@ function PendingRequests({ period, requests, getDisplayName }: PendingRequestsPr
                             </Button>
                             <Dialog>
                                 <DialogTrigger asChild>
-                                    <Button variant='outline' disabled={isLoading}>Deny</Button>
+                                    <Button
+                                        variant='outline'
+                                        className='border-red-200 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800'
+                                        disabled={isLoading}
+                                    >
+                                        Deny
+                                    </Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>

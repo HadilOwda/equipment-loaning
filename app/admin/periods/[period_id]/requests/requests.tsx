@@ -20,6 +20,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircleIcon } from 'lucide-react';
 import { UserDisplayNames } from '../display-names-config';
+import { RequestStatus } from '@/amplify/data/constants';
+import Subtext from '@/components/primitives/text/subtext';
 
 export interface Assignment {
     equipmentId: string;
@@ -28,6 +30,14 @@ export interface Assignment {
 
 export default function Requests({ period, userDisplayNames }: { period: PeriodRequests, userDisplayNames: UserDisplayNames }) {
     const [newAssignments, setNewAssignments] = useState<Assignment[]>([]);
+
+    const assignedCount = period.requests.filter(
+        r => (r.assignment || r.pastAssignment) && r.status !== RequestStatus.DENIED
+    ).length;
+    const unassignedCount = period.requests.filter(
+        r => !r.assignment && !r.pastAssignment && r.status !== RequestStatus.DENIED
+    ).length;
+    const deniedRequests = period.requests.filter(r => r.status === RequestStatus.DENIED);
 
     return (
         <Container>
@@ -39,7 +49,7 @@ export default function Requests({ period, userDisplayNames }: { period: PeriodR
                         <AccordionItem value='assigned-requests'>
                             <AccordionTrigger>
                                 <Header className='mb-0'>
-                                    Assigned Requests
+                                    Assigned Requests ({assignedCount})
                                 </Header>
                             </AccordionTrigger>
                             <AccordionContent>
@@ -54,7 +64,7 @@ export default function Requests({ period, userDisplayNames }: { period: PeriodR
                         <AccordionItem value='unassigned-requests'>
                             <AccordionTrigger>
                                 <Header className='mb-0'>
-                                    Unassigned Requests
+                                    Unassigned Requests ({unassignedCount})
                                 </Header>
                             </AccordionTrigger>
                             <AccordionContent>
@@ -64,6 +74,37 @@ export default function Requests({ period, userDisplayNames }: { period: PeriodR
                                     setNewAssignments={setNewAssignments}
                                     userDisplayNames={userDisplayNames}
                                 />
+                            </AccordionContent>
+                        </AccordionItem>
+
+                        {/* Denied requests */}
+                        <AccordionItem value='denied-requests'>
+                            <AccordionTrigger>
+                                <Header className='mb-0'>
+                                    Denied Requests ({deniedRequests.length})
+                                </Header>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                                {deniedRequests.length == 0 ?
+                                    <div className='text-center'>
+                                        <Subtext>No denied requests</Subtext>
+                                    </div>
+                                    :
+                                    <div className='flex flex-col gap-2'>
+                                        {deniedRequests.map(request =>
+                                            <Item variant='outline' key={request.id}>
+                                                <ItemContent>
+                                                    <ItemTitle>
+                                                        {userDisplayNames.find(u => request.owner == u?.username)?.displayName ?? 'USER NOT FOUND'}
+                                                    </ItemTitle>
+                                                    <ItemDescription>
+                                                        Requested: {request.equipmentTypeRequests.map(e => e.equipmentType.name).join(', ')}
+                                                    </ItemDescription>
+                                                </ItemContent>
+                                            </Item>
+                                        )}
+                                    </div>
+                                }
                             </AccordionContent>
                         </AccordionItem>
                     </Accordion>
