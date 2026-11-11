@@ -79,7 +79,7 @@ function PeriodOverview({ period }: { period: PeriodWithDetails }) {
 }
 
 function PeriodLoanableEquipment({ period }: { period: PeriodWithDetails }) {
-  const equipment = period.loanableEquipment.map((l) => l.equipment);
+  const equipment: PeriodWithDetails['loanableEquipment'][number]['equipment'][] = period.loanableEquipment.map((l) => l.equipment);
   const nonAssignedEquipmentCount = equipment.filter((e) => !e.assignment).length;
 
   return (
@@ -90,6 +90,7 @@ function PeriodLoanableEquipment({ period }: { period: PeriodWithDetails }) {
           <UpdateLoanableEquipmentDialog
             periodId={period.id}
             initialLoanableEquipment={equipment.map(e => e.id)}
+            assignedEquipmentIds={equipment.filter(e => e.assignment).map(e => e.id)}
           />
         </div>
         <Subtext>Equipment that can be checked out in this period.</Subtext>
@@ -131,7 +132,9 @@ function PeriodLoanableEquipment({ period }: { period: PeriodWithDetails }) {
                   <TableCell>{e.equipmentType.name}</TableCell>
                   <TableCell>{e.id}</TableCell>
                   <TableCell>{e.assignment ?
-                    <div className='flex items-center gap-1'>Checked Out</div>
+                    <div className='flex items-center gap-1'>
+                      {e.assignment.status === RequestStatus.CHECKED_OUT ? 'Checked Out' : 'Assigned'}
+                    </div>
                     :
                     <div className='flex items-center gap-1'>Available</div>
                   }</TableCell>
