@@ -14,6 +14,7 @@ interface TextInputListProps {
     isRequired?: boolean;
 
     addButtonLabel: string;
+    initialValues?: string[];  // optional; only read when the component first mounts
 }
 
 interface ItemState {
@@ -21,12 +22,14 @@ interface ItemState {
     id: number;  // auto-incrementing int id for idempotency in deletion
 }
 
-export default function TextInputList({ onChange, label, inputID, isRequired, addButtonLabel }: TextInputListProps) {
-    // For simplicity, initial values are not supported (i.e. values starts as an empty list);
-    // thus, this component is write-only
+export default function TextInputList({ onChange, label, inputID, isRequired, addButtonLabel, initialValues }: TextInputListProps) {
+    // Starts empty unless `initialValues` is given. Later changes to `initialValues` are ignored,
+    // so remount the component (e.g. by closing and reopening a dialog) to reset it.
 
-    const nextIDRef = useRef(0);
-    const [items, setItems] = useState<ItemState[]>([]);
+    const nextIDRef = useRef(initialValues?.length ?? 0);
+    const [items, setItems] = useState<ItemState[]>(
+        () => (initialValues ?? []).map((value, id) => ({ value, id }))
+    );
 
     useEffect(() => {
         onChange(items.map(item => item.value));

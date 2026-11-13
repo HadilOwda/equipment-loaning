@@ -17,6 +17,7 @@ import { PeriodType, RequestStatus } from '@/amplify/data/constants';
 import generateClient from '@/app/utils/generate-client';
 import handleError from '@/app/utils/handle-error';
 import { saveRequestEdits } from './edit-request-operation';
+import { composeCollateral, parseCollateral } from '../../collateral-with-phone';
 
 interface EditRequestFormProps {
     request: RequestWithDetails;
@@ -36,9 +37,10 @@ export default function EditRequestForm({
         .sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
         .map((item) => item.equipmentType.id);
 
-    const [collateral, setCollateral] = useState(
-        request.collateralDescription
-    );
+    // The collateral and phone number are stored together in one field
+    const initialDetails = parseCollateral(request.collateralDescription);
+    const [collateral, setCollateral] = useState(initialDetails.collateral);
+    const [phone, setPhone] = useState(initialDetails.phone);
 
     const [
         selectedEquipmentTypeIds,
@@ -49,7 +51,8 @@ export default function EditRequestForm({
     const [isLoading, setIsLoading] = useState(false);
 
     const handleCancelEditing = () => {
-        setCollateral(request.collateralDescription);
+        setCollateral(initialDetails.collateral);
+        setPhone(initialDetails.phone);
         setSelectedEquipmentTypeIds(initialEquipmentTypeIds);
         setIsEditing(false);
     };
@@ -59,13 +62,14 @@ export default function EditRequestForm({
 
         if (
             !collateral.trim() ||
+            !phone.trim() ||
             selectedEquipmentTypeIds.length === 0 ||
             selectedEquipmentTypeIds.includes('') ||
             new Set(selectedEquipmentTypeIds).size !==
                 selectedEquipmentTypeIds.length
         ) {
             toast.error(
-                'Please provide collateral and valid equipment preferences.'
+                'Please provide collateral, a phone number, and valid equipment preferences.'
             );
             return;
         }
@@ -167,7 +171,7 @@ export default function EditRequestForm({
             // through the testable database helper.
             await saveRequestEdits(
                 request.id,
-                collateral,
+                composeCollateral(collateral, phone),
                 selectedEquipmentTypeIds,
                 (
                     currentRequest.equipmentTypeRequests ?? []
@@ -261,6 +265,16 @@ export default function EditRequestForm({
                 onChange={setCollateral}
                 isRequired={true}
                 placeholder='e.g. Stanford ID card'
+            />
+
+            <TextInputWithLabel
+                inputID='edit-request-phone'
+                label='Phone number'
+                description='So we can reach you about your equipment. Include your country code if you are outside the US.'
+                value={phone}
+                onChange={setPhone}
+                isRequired={true}
+                placeholder='e.g. +1 650 555 0123'
             />
 
             <div className='flex gap-3'>

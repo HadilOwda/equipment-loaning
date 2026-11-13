@@ -15,12 +15,14 @@ import generateClient from '@/app/utils/generate-client';
 import handleError from '@/app/utils/handle-error';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { composeCollateral } from '../collateral-with-phone';
 
 export default function NewRequest({ periods }: { periods: Period[] }) {
     const router = useRouter();
     const [periodId, setPeriodId] = useState('');
     const [selectedEquipmentTypeIds, setSelectedEquipmentTypeIds] = useState<string[]>([]);
     const [collateral, setCollateral] = useState('');
+    const [phone, setPhone] = useState('');
 
     const [isLoading, setIsLoading] = useState(false);
 
@@ -30,7 +32,8 @@ export default function NewRequest({ periods }: { periods: Period[] }) {
         selectedPeriod &&
         selectedEquipmentTypeIds.length > 0 &&
         !selectedEquipmentTypeIds.includes('') &&
-        collateral != ''
+        collateral.trim() != '' &&
+        phone.trim() != ''
     );
 
     const handleSubmit = async () => {
@@ -69,7 +72,7 @@ export default function NewRequest({ periods }: { periods: Period[] }) {
 
             const request = await client.models.Request.create({
                 periodId,
-                collateralDescription: collateral,
+                collateralDescription: composeCollateral(collateral, phone),
             });
 
             if (request.errors) {
@@ -101,6 +104,7 @@ export default function NewRequest({ periods }: { periods: Period[] }) {
                 setPeriodId('');
                 setSelectedEquipmentTypeIds([]);
                 setCollateral('');
+                setPhone('');
 
                 toast.success('Request created');
                 router.refresh();
@@ -175,6 +179,19 @@ export default function NewRequest({ periods }: { periods: Period[] }) {
                                     onChange={setCollateral}
                                     isRequired={true}
                                     placeholder="e.g. Jane Stanford's drivers license"
+                                />
+
+                                <TextInputWithLabel
+                                    inputID='new-request-phone'
+                                    label='Phone number'
+                                    description={`
+                                        So we can reach you about your equipment. Include your country code
+                                        if you are outside the US.
+                                    `}
+                                    value={phone}
+                                    onChange={setPhone}
+                                    isRequired={true}
+                                    placeholder='e.g. +1 650 555 0123'
                                 />
 
                                 <Button
